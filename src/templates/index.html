@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload de Documento</title>
+
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #f4f7fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+
+      .container {
+        margin: 0 auto;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        width: 400px;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 20px;
+      }
+
+      label {
+        font-size: 16px;
+        color: #555;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      input[type="file"] {
+        font-size: 16px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        width: 21rem;
+        margin-bottom: 20px;
+        cursor: pointer;
+      }
+
+      button {
+        background-color: #007bff;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .note {
+        font-size: 14px;
+        color: #0e8668;
+        margin-top: 10px;
+      }
+
+      .resposta_json {
+        text-align: left; /* Alinha o texto à esquerda */
+        white-space: pre-wrap; /* Mantém quebras de linha e espaços */
+        background-color: #f8f9fa; /* Cor de fundo clara */
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: monospace; /* Fonte de código */
+        font-size: 0.95rem;
+        color: #007bff;
+        overflow-x: auto;
+        max-height: 300px;
+        margin-top: 1rem;
+      }
+
+      .div_form {
+        max-height: 40rem;
+        margin: 0 auto;
+        padding: 1rem;
+        border-radius: 15px;
+        background-color: #fff;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+      }
+
+      .form {
+        max-width: 40rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        gap: 1rem;
+      }
+
+      .itens input {
+        flex: 1 1 48%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: border 0.3s, box-shadow 0.3s;
+      }
+
+      input.copiado {
+        border: 2px solid #28a745;
+        background-color: #eaffea;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Envie seu Documento</h1>
+      <form
+        id="uploadForm"
+        action="/extraiDoc/"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <label for="documento">Selecione o documento:</label>
+        <input
+          type="file"
+          name="arquivo"
+          id="arquivo"
+          accept=".pdf,.jpg,.jpeg,.png"
+          required
+        />
+        <button type="submit" onclick="extraiDoc(event)">Enviar</button>
+      </form>
+      <p class="note">Aceitamos arquivos PDF, JPG, JPEG e PNG.</p>
+      <div id="resposta" class="resposta_json"></div>
+    </div>
+
+
+    <script>
+      // função para enviar o doc para extração
+      async function extraiDoc(event) {
+        event.preventDefault();
+
+        const form = document.getElementById("uploadForm");
+        const fileInput = document.getElementById("arquivo");
+        const respostaDiv = document.getElementById("resposta");
+
+        respostaDiv.textContent = "";
+
+        const file = fileInput.files[0];
+        if (!file) {
+          respostaDiv.innerText = "Selecione um arquivo antes de enviar";
+          respostaDiv.style.color = "red";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("arquivo", file);
+
+        try {
+          const response = await fetch("/extrair/", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+          }
+
+          const raw = await response.json();
+
+          respostaDiv.innerHTML = ""; // limpa
+
+          // Exibe formatado
+          const pre = document.createElement("pre");
+          pre.innerText = raw.resultado ?? raw; // mantém quebra de linha real
+          pre.style.backgroundColor = "#f4f4f4";
+          pre.style.padding = "10px";
+          pre.style.border = "1px solid #ccc";
+          pre.style.borderRadius = "5px";
+          pre.style.overflowX = "auto";
+
+          respostaDiv.appendChild(pre);
+        } catch (err) {
+          console.error("Fetch error:", err); // debug
+          respostaDiv.innerText = `Falha ao enviar: ${err.message}`;
+          respostaDiv.style.color = "red";
+        }
+      }
+
+      // função para copiar dados
+      async function copiarValor(idCampo) {
+        const campo = document.getElementById(idCampo);
+        const valor = campo.value;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(valor);
+            campo.classList.add("copiado");
+            setTimeout(() => campo.classList.remove("copiado"), 1000);
+          } catch (err) {
+            console.error("Erro ao copiar com Clipboard API:", err);
+            alert("Erro ao copiar");
+          }
+        } else {
+          // Fallback usando textarea
+          const textarea = document.createElement("textarea");
+          textarea.value = valor;
+          document.body.appendChild(textarea);
+          textarea.select();
+
+          try {
+            const sucesso = document.execCommand("copy");
+            if (sucesso) {
+              campo.classList.add("copiado");
+              setTimeout(() => campo.classList.remove("copiado"), 1000);
+            } else {
+              throw new Error("execCommand falhou");
+            }
+          } catch (err) {
+            console.error("Erro ao copiar (fallback):", err);
+            alert("Erro ao copiar");
+          }
+
+          document.body.removeChild(textarea);
+        }
+      }
+    </script>
+  </body>
+</html>

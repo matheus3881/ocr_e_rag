@@ -144,20 +144,9 @@
   <body>
     <div class="container">
       <h1>Envie seu Documento</h1>
-      <form
-        id="uploadForm"
-        action="/extraiDoc/"
-        method="post"
-        enctype="multipart/form-data"
-      >
+      <form id="uploadForm" action="/extraiDoc/" method="post" enctype="multipart/form-data">
         <label for="documento">Selecione o documento:</label>
-        <input
-          type="file"
-          name="arquivo"
-          id="arquivo"
-          accept=".pdf,.jpg,.jpeg,.png"
-          required
-        />
+        <input type="file" name="arquivo" id="arquivo" accept=".pdf,.jpg,.jpeg,.png" required />
         <button type="submit" onclick="extraiDoc(event)">Enviar</button>
       </form>
       <p class="note">Aceitamos arquivos PDF, JPG, JPEG e PNG.</p>
@@ -165,17 +154,18 @@
     </div>
 
     <div>
-      <div
-        id="pdfViewerContainer"
-        style="height: 80vh; overflow-y: auto; border: 1px solid #ccc"
-      >
+      <div id="pdfViewerContainer" style="height: 80vh; overflow-y: auto; border: 1px solid #ccc">
         <!-- Aqui o JavaScript vai colocar os canvas -->
       </div>
     </div>
 
+
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <script>
+      
+
       document.getElementById("arquivo").addEventListener("change", (event) => {
         const file = event.target.files[0];
 
@@ -228,9 +218,25 @@
 
           respostaDiv.innerHTML = ""; // limpa
 
-          // Exibe formatado
           const pre = document.createElement("pre");
-          pre.innerText = raw.resultado ?? raw; // mantém quebra de linha real
+
+          const resposta = raw.resposta ?? "Resposta não encontrada";
+
+          const fontesTexto =
+            raw.fontes && Array.isArray(raw.fontes)
+              ? raw.fontes
+                  .map((fonte) => {
+                    const numeroPagina = parseInt(fonte.match(/\d+/)?.[0]);
+                    if (!isNaN(numeroPagina)) {
+                      return `<a href="#" onclick="rolarParaPagina(${numeroPagina})">${fonte}</a>`;
+                    }
+                    return fonte;
+                  })
+                  .join(", ")
+              : "Fontes não encontradas";
+
+          pre.innerHTML = `${resposta}<br><br><strong>Fontes:</strong> ${fontesTexto}`;
+
           pre.style.backgroundColor = "#f4f4f4";
           pre.style.padding = "10px";
           pre.style.border = "1px solid #ccc";
@@ -283,6 +289,13 @@
         }
       }
 
+      function rolarParaPagina(pagina) {
+        const paginaElement = document.getElementById(`pagina_${pagina}`);
+        if (paginaElement) {
+          paginaElement.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+
       async function renderizarPDF(caminho) {
         try {
           // Verifica se é mesmo um File válido
@@ -318,7 +331,12 @@
             const context = canvas.getContext("2d");
             await page.render({ canvasContext: context, viewport }).promise;
 
-            container.appendChild(canvas);
+            // ✅ Cria um contêiner para cada página com um ID
+            const paginaWrapper = document.createElement("div");
+            paginaWrapper.id = `pagina_${pageNum}`;
+            paginaWrapper.appendChild(canvas);
+
+            container.appendChild(paginaWrapper);
           }
         } catch (error) {
           console.error("❌ Erro ao renderizar PDF:", error);

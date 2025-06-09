@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+jinja2
+easyocr
+ollama
+pymupdf
+pillow
+opencv-python
+numpy
